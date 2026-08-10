@@ -1,5 +1,6 @@
 import { put, del, get } from '@vercel/blob'
 import { getSql } from './db'
+import { titleFromHtml, titleFromSlug } from './ingest'
 
 /** neon() returns a union of result shapes; every query here selects rows. */
 function rows<T>(result: unknown): T[] {
@@ -65,7 +66,8 @@ export async function allTags(): Promise<{ tag: string; count: number }[]> {
 
 type SaveInput = {
   slug: string
-  title: string
+  /** Derived from the file's <title>, else the slug, when not supplied. */
+  title?: string | null
   description?: string | null
   kind?: string
   tags?: string[]
@@ -84,6 +86,15 @@ export async function saveArtifact(input: SaveInput): Promise<Artifact> {
   const sql = getSql()
   const existing = await getArtifact(input.slug)
   const version = existing ? existing.version + 1 : 1
+
+  // Guaranteed here rather than at each call site: a row with no title is a
+  // NOT NULL violation, and every caller has the same sensible fallbacks.
+  const source = typeof input.body === 'string' ? input.body : input.body.toString('utf8')
+  const title =
+    input.title?.trim() ||
+    titleFromHtml(source) ||
+    existing?.title ||
+    titleFromSlug(input.slug)
 
   // `addRandomSuffix: false` keeps the pathname predictable per version.
   const blob = await put(
@@ -112,7 +123,7 @@ export async function saveArtifact(input: SaveInput): Promise<Artifact> {
 
   const result = await sql`
     insert into artifacts (slug, title, description, kind, tags, visibility, blob_pathname, size_bytes, version, source)
-    values (${input.slug}, ${input.title}, ${input.description ?? null},
+    values (${input.slug}, ${title}, ${input.description ?? null},
             ${input.kind ?? 'html'}, ${input.tags ?? []}, ${input.visibility ?? 'private'},
             ${blob.pathname}, ${size}, ${version}, ${input.source ?? null})
     on conflict (slug) do update set

@@ -1,12 +1,6 @@
 import { authorizeRequest } from '@/lib/authorize'
 import { listArtifacts, saveArtifact } from '@/lib/artifacts'
-import {
-  scanForSensitiveData,
-  slugFromName,
-  slugify,
-  titleFromHtml,
-  titleFromSlug,
-} from '@/lib/ingest'
+import { scanForSensitiveData, slugFromName, slugify } from '@/lib/ingest'
 
 export async function GET(request: Request) {
   if (!(await authorizeRequest(request)))
@@ -59,11 +53,6 @@ export async function POST(request: Request) {
   }
 
   const slug = fields.slug ? slugify(fields.slug) : slugFromName(filename)
-  const title =
-    fields.title?.trim() ||
-    titleFromHtml(body) ||
-    titleFromSlug(slug)
-
   const tags = (fields.tags ?? '')
     .split(',')
     .map((t) => t.trim())
@@ -71,7 +60,7 @@ export async function POST(request: Request) {
 
   const artifact = await saveArtifact({
     slug,
-    title,
+    title: fields.title,
     description: fields.description || null,
     kind: fields.kind || 'html',
     tags,

@@ -22,13 +22,21 @@ const sql = neon(process.env.DATABASE_URL)
 const ddl = readFileSync(resolve(root, 'lib/schema.sql'), 'utf8')
 
 // neon() batches poorly on multi-statement strings; run them one at a time.
+//
+// Comments are stripped per line *before* splitting. Filtering out chunks that
+// merely start with `--` would silently drop the statement that follows the
+// comment -- that bug skipped `create extension pg_trgm` and the
+// `artifact_versions` table entirely.
 const statements = ddl
-  .split(/;\s*$/m)
+  .split('\n')
+  .map((line) => line.replace(/--.*$/, ''))
+  .join('\n')
+  .split(';')
   .map((s) => s.trim())
-  .filter((s) => s && !s.startsWith('--'))
+  .filter(Boolean)
 
 for (const statement of statements) {
-  const label = statement.split('\n')[0].slice(0, 60)
+  const label = statement.replace(/\s+/g, ' ').slice(0, 64)
   await sql.query(statement)
   console.log('✓', label)
 }

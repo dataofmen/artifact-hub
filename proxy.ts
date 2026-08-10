@@ -9,10 +9,15 @@ import { clerkMiddleware } from '@clerk/nextjs/server'
 export default clerkMiddleware()
 
 export const config = {
-  matcher: [
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Always run for Clerk's auto-proxy path
-    '/__clerk/:path*',
-    '/(api|trpc)(.*)',
-  ],
+  /**
+   * Runs on everything except Next's own build output.
+   *
+   * Deliberately does NOT skip asset-looking paths. A request for a file that
+   * does not exist (`/favicon.png`, `/style.css`) is routed to the not-found
+   * page, which renders the root layout -- and that layout calls `auth()`.
+   * Excluding those extensions left Clerk uninitialised there, so every such
+   * 404 crashed with "auth() was called but Clerk can't detect usage of
+   * clerkMiddleware()".
+   */
+  matcher: ['/((?!_next/static|_next/image).*)', '/__clerk/:path*'],
 }

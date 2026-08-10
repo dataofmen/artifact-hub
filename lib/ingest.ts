@@ -34,7 +34,11 @@ export function slugify(text: string): string {
  */
 export function slugFromName(name: string): string {
   const stem = name.replace(/\.(html?|md|tsx?|jsx?)$/i, '')
-  return slugify(stem) || slugify(romanize(stem)) || 'artifact'
+  // Romanise up front when Hangul is present. Slugifying first would keep only
+  // the incidental ASCII fragments -- 'CLI 연결 테스트' became 'cli', and
+  // '2026 매출 계획' would become '2026'.
+  const base = /[가-힣]/.test(stem) ? romanize(stem) : stem
+  return slugify(base) || 'artifact'
 }
 
 export function titleFromHtml(source: string): string | null {

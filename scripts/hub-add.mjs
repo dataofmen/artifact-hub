@@ -24,16 +24,31 @@ const files = []
 const opts = {}
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i]
-  if (a.startsWith('--')) opts[a.slice(2)] = argv[++i]
+  // `--local` is a boolean flag; every other option consumes the next argument.
+  if (a === '--local') opts.local = true
+  else if (a.startsWith('--')) opts[a.slice(2)] = argv[++i]
   else files.push(a)
 }
 
 if (!files.length) {
-  console.error(`Usage: pnpm hub:add <파일...> [--title T] [--slug S] [--tags a,b] [--description D] [--source S]`)
+  console.error(`Usage: pnpm hub:add <파일...> [옵션]
+
+옵션:
+  --title T         제목 (비우면 HTML <title>)
+  --slug S          URL 슬러그 (비우면 파일명에서 생성)
+  --tags a,b        쉼표 구분 태그
+  --description D   설명
+  --source S        출처 메모
+  --local           프로덕션 대신 로컬 dev 서버로 (기본은 프로덕션)`)
   process.exit(1)
 }
 
-const base = opts.url || process.env.HUB_URL || 'http://localhost:3000'
+// Production by default: uploading to the deployed hub is the common case.
+// `--local` (or HUB_URL) targets a dev server instead.
+const base = opts.url
+  || (opts.local !== undefined ? 'http://localhost:3019' : null)
+  || process.env.HUB_URL
+  || 'https://artifact-hub-virid.vercel.app'
 const token = process.env.HUB_TOKEN
 if (!token) {
   console.error('HUB_TOKEN이 설정되지 않았습니다. .env.local과 Vercel 환경변수에 추가하세요.')

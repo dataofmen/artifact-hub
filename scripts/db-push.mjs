@@ -7,10 +7,16 @@ import { neon } from '@neondatabase/serverless'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
-// Node does not auto-load .env.local the way Next does.
-for (const line of readFileSync(resolve(root, '.env.local'), 'utf8').split('\n')) {
-  const match = line.match(/^([A-Z0-9_]+)="?([^"]*)"?$/)
-  if (match && !process.env[match[1]]) process.env[match[1]] = match[2]
+// Node does not auto-load .env.local the way Next does. Missing is fine --
+// a fresh clone has not run `vercel env pull` yet, and the checks below give a
+// better message than an ENOENT stack trace.
+try {
+  for (const line of readFileSync(resolve(root, '.env.local'), 'utf8').split('\n')) {
+    const m = line.match(/^([A-Z0-9_]+)="?([^"]*)"?$/)
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2]
+  }
+} catch {
+  // no .env.local yet
 }
 
 if (!process.env.DATABASE_URL) {

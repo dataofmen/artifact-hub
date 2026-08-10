@@ -22,6 +22,20 @@ CDN이 `/assets/foo-a1b2c3.html` 로 인증 없이 내보내고, 그 URL은 공�
 여기서는 파일이 private Blob에 있고 `/a/<slug>/raw` 라우트가 Clerk 세션을 확인한
 뒤에만 스트리밍합니다. **이 검사를 우회하는 URL이 존재하지 않습니다.**
 
+검증된 동작 (로그아웃 상태):
+
+| 경로 | 결과 |
+|------|------|
+| `/`, `/upload`, `/a/<slug>` | 307 → `/sign-in` |
+| `/a/<slug>/raw` | **401** |
+| `/p/<slug>` (비공개 아티팩트) | **404** — 존재 탐색 불가 |
+| `/api/artifacts` | 401 |
+| Blob 직접 URL | **403** — MyAdmin에서 200으로 전문이 새던 경로 |
+
+인증은 경로 매칭이 아니라 **리소스마다** 확인합니다 (`lib/require-user.ts`).
+Clerk이 `createRouteMatcher` 를 deprecated 한 이유가 이것입니다 — 매처는 Next의
+실제 라우팅과 어긋나 보호 대상을 노출시킬 수 있습니다.
+
 ## 아티팩트 올리기
 
 ```bash
@@ -56,19 +70,15 @@ pnpm hub:add x.html --title '매출 상황판' --slug sales-status --source 0015
 
 ```bash
 pnpm install
-
-# 1. Neon 프로비저닝 (브라우저에서 약관 동의 1회 필요)
-vercel integration add neon --name artifact-hub-db --no-claim
-
-# 2. 환경변수 내려받기
+vercel integration add neon --name artifact-hub-db --no-claim  # 약관 동의 1회 필요
 vercel env pull .env.local --yes
-
-# 3. 스키마 적용
+echo "HUB_TOKEN=$(openssl rand -hex 32)" >> .env.local
 pnpm db:push
-
-# 4. 로컬 실행
 pnpm dev
 ```
+
+**Clerk 키는 로컬 개발에 필요하지 않습니다.** Clerk v7의 keyless 모드가 임시 개발
+인스턴스를 자동 발급합니다. 배포할 때만 실제 키가 필요합니다.
 
 필요한 환경변수:
 
@@ -76,8 +86,8 @@ pnpm dev
 |------|------|------|
 | `BLOB_READ_WRITE_TOKEN` | 파일 저장 | `vercel blob create-store` 가 자동 설정 |
 | `DATABASE_URL` | 메타데이터 | Neon 통합이 자동 설정 |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | 인증 (클라이언트) | Clerk 대시보드 → API Keys |
-| `CLERK_SECRET_KEY` | 인증 (서버) | Clerk 대시보드 → API Keys. **비밀** |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | 인증 (클라이언트). 배포 시에만 | Clerk 대시보드 → API Keys |
+| `CLERK_SECRET_KEY` | 인증 (서버). 배포 시에만 | Clerk 대시보드 → API Keys. **비밀** |
 | `HUB_TOKEN` | CLI 업로드 | 직접 생성한 랜덤 문자열 |
 
 `HUB_TOKEN` 은 셸에 Clerk 세션이 없기 때문에 필요합니다. 미설정 시 CLI 경로가

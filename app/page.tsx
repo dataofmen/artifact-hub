@@ -1,7 +1,7 @@
 import Link from 'next/link'
-import { auth } from '@clerk/nextjs/server'
 import { allTags, listArtifacts } from '@/lib/artifacts'
 import { databaseConfigured } from '@/lib/db'
+import { requireUser } from '@/lib/require-user'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,17 +10,7 @@ export default async function Home({
 }: {
   searchParams: Promise<{ q?: string; tag?: string }>
 }) {
-  const { userId } = await auth()
-  if (!userId) {
-    return (
-      <div className="py-24 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Artifact Hub</h1>
-        <p className="mt-2 text-zinc-500 dark:text-zinc-400">
-          로그인이 필요합니다.
-        </p>
-      </div>
-    )
-  }
+  await requireUser()
 
   if (!databaseConfigured()) {
     return <SetupNotice />

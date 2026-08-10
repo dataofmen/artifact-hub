@@ -1,23 +1,12 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+import { clerkMiddleware } from '@clerk/nextjs/server'
 
 /**
- * Everything is private by default. The only unauthenticated surfaces are the
- * sign-in flow itself and the public artifact route, which does its own
- * per-artifact visibility check.
+ * Only attaches Clerk's auth context. Authorization happens at each resource
+ * (`lib/require-user.ts`) rather than by path matching here -- Clerk deprecated
+ * `createRouteMatcher` precisely because a matcher can diverge from how Next
+ * actually routes a request and leave a protected resource reachable.
  */
-const isPublic = createRouteMatcher([
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-  '/p/(.*)', // explicitly-published artifacts
-  '/api/artifacts', // guards itself: Clerk session OR CLI token
-  '/__clerk/(.*)',
-])
-
-export default clerkMiddleware(async (auth, request) => {
-  if (!isPublic(request)) {
-    await auth.protect()
-  }
-})
+export default clerkMiddleware()
 
 export const config = {
   matcher: [

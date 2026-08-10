@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { getArtifact } from '@/lib/artifacts'
+import { requireUser } from '@/lib/require-user'
 import { VisibilityToggle } from './visibility-toggle'
 
 export default async function ArtifactPage({
@@ -7,6 +8,8 @@ export default async function ArtifactPage({
 }: {
   params: Promise<{ slug: string }>
 }) {
+  await requireUser()
+
   const { slug } = await params
   const artifact = await getArtifact(slug)
   if (!artifact) notFound()

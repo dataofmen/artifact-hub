@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "tsx --test lib/artifact-in.test.ts",
+    "check:suffix-matcher": "tsx scripts/check-suffix-matcher.ts",
     "db:push": "node scripts/db-push.mjs",
     "hub:add": "node scripts/hub-add.mjs"
   },
